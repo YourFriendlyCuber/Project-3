@@ -19,7 +19,6 @@ def handle_request(hostname, rr_table):
     rr_table.display_table()
     
 
-
 def main():
     rr_table = RRTable()
     try:
@@ -57,53 +56,69 @@ class RRTable:
         self.records = {
             
         }
-
+        self.record_number = 0
         # Start the background thread
         self.lock = threading.Lock()
         self.thread = threading.Thread(target=self.__decrement_ttl, daemon=True)
         self.thread.start()
-
+    
     def add_record(self, hostname, record_type, result, ttl, static):
         with self.lock:
-            self.records[hostname] = {
+            self.records[self.record_number] = {
+                "name": hostname,
                 "type": record_type,
                 "result": result,
                 "ttl": ttl,
                 "static" : static
             }
+            self.record_number += 1
 
     def get_record(self, hostname):
         with self.lock:
-            record = self.records.get(hostname)
-            if record:
-                return record
-            else:
-                return None
+            for key, record in self.records:
+                if record['hostname'] == hostname:
+                    return record
+            return None
 
     def display_table(self):
         with self.lock:
             # Display the table in the following format (include the column names):
             # record_number,name,type,result,ttl,static
+            print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
+            print('-' * 90)
             
+            for record_id, record in self.records.items():
+                 print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
             pass
 
     def __decrement_ttl(self):
         while True:
             with self.lock:
                 # Decrement ttl
+                for record_id, record in self.records.items():
+                    if record['tll'] > 0:
+                        record['ttl'] -= 1
                 self.__remove_expired_records()
             time.sleep(1)
 
     def __remove_expired_records(self):
         # This method is only called within a locked context
         # Remove expired records
-        current_time = time.time()
-        expired_records = [name for name, details in self.records.items() if details['ttl']]
-        for record in expired_records:
-            del self.records[record]
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] <= 0]
+        for key in expired_keys:
+            del self.records[key]
         # Update record numbers
-        for details in self.records.values():
-            details['ttl'] -= 1
+        new_record_number = 0
+        new_records = {}
+        
+        for key, record in sorted(self.records.items()):
+            record['record_number'] = new_record_number
+            new_records[new_record_number] = record
+            new_record_number += 1
+        
+        self.records = new_records
+        self.record_number = new_record_number
+        pass
 
 
 class DNSTypes:

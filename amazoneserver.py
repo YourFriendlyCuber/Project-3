@@ -48,7 +48,9 @@ def deserialize():
 
 class RRTable:
     def __init__(self):
-        # self.records = ?
+        self.records = {
+            
+        }
         self.record_number = 0
 
     def add_record(self):

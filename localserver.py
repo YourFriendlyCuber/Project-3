@@ -19,7 +19,7 @@ def listen():
             # With the server name, you can do a self lookup to get the IP address (e.g. 127.0.0.1)
 
             # When sending a query to the authoritative DNS server, use port 22000
-
+            
             # Then save the record if valid
             # Else, add "Record not found" in the DNS response
 
@@ -35,7 +35,12 @@ def listen():
 
 
 def main():
+    rr_table = RRTable()
     # Add initial records
+    rr_table.add_record("www.csusm.edu", "A", "144.37.5.45", None, 1)
+    rr_table.add_record("my.csusm.edu", "A", "144.37.5.150", None, 1)
+    rr_table.add_record("amazone.com", "NS", "dns.amazone.com", None, 1)
+    rr_table.add_record("dns.amazone.com", "A", "127.0.0.1", None, 1)
     # These can be found in the test cases diagram
 
     local_dns_address = ("127.0.0.1", 21000)
@@ -67,17 +72,20 @@ class RRTable:
         self.thread.start()
 
     def add_record(self, hostname, record_type, result, ttl, static):
+        self.record_number += 1
         with self.lock:
-            self.records[hostname] = {
+            self.records[self.record_number] = {
+                "record_number": self.record_number,
+                "name": hostname,
                 "type": record_type,
                 "result": result,
                 "ttl": ttl,
                 "static" : static
             }
 
-    def get_record(self, hostname):
+    def get_record(self, number):
         with self.lock:
-            record = self.records.get(hostname)
+            record = self.records.get(number)
             if record:
                 return record
             else:
@@ -93,6 +101,9 @@ class RRTable:
         while True:
             with self.lock:
                 # Decrement ttl
+                for record_id, record in self.records.items():
+                    if (record['tll'] > 0) and record['ttl'] != None:
+                        record['ttl'] -= 1
                 self.__remove_expired_records()
             time.sleep(1)
 
@@ -100,7 +111,20 @@ class RRTable:
         # This method is only called within a locked context
 
         # Remove expired records
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] <= 0]
+        for key in expired_keys:
+            del self.records[key]
         # Update record numbers
+        new_record_number = 0
+        new_records = {}
+        
+        for key, record in sorted(self.records.items()):
+            record['record_number'] = new_record_number
+            new_records[new_record_number] = record
+            new_record_number += 1
+        
+        self.records = new_records
+        self.record_number = new_record_number
         pass
 
 
