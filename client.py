@@ -89,7 +89,6 @@ class RRTable:
             
             for record_id, record in self.records.items():
                  print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
-            pass
 
     def __decrement_ttl(self):
         while True:

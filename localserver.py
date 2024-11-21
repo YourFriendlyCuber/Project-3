@@ -83,19 +83,22 @@ class RRTable:
                 "static" : static
             }
 
-    def get_record(self, number):
+    def get_record(self, hostname):
         with self.lock:
-            record = self.records.get(number)
-            if record:
-                return record
-            else:
-                return None
+            for key, record in self.records:
+                if record['hostname'] == hostname:
+                    return record
+            return None
 
     def display_table(self):
         with self.lock:
             # Display the table in the following format (include the column names):
             # record_number,name,type,result,ttl,static
-            pass
+            print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
+            print('-' * 90)
+            
+            for record_id, record in self.records.items():
+                print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
 
     def __decrement_ttl(self):
         while True:
