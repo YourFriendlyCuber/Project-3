@@ -5,37 +5,52 @@ import threading
 import time
 
 
-def listen():
+def listen(hostname, rr_table, connection):
     try:
         while True:
             # Wait for query
-
+            connection.listen(5)
+            print("local server ready to recieve")
+            while True:
+                request, connection_addr = connection.recieve_message()
+                print(f"Localserver: Recieved Request for {request['hostname']} from {connection_addr}")
+                break
             # Check RR table for record
-
+            record = rr_table.get_record(hostname)
+            if record:
+                print(f"LocalServer: Record found for {hostname}: {record['result']}")
             # If not found, ask the authoritative DNS server of the requested hostname/domain
-
+            
             # This means parsing the query to get the domain (e.g. amazone.com from shop.amazone.com)
             # With the domain, you can do a self lookup to get the NS record of the domain (e.g. dns.amazone.com)
             # With the server name, you can do a self lookup to get the IP address (e.g. 127.0.0.1)
 
             # When sending a query to the authoritative DNS server, use port 22000
-            
+            else:
+                print(f"record not found for {hostname}. Asking authoritiative DNS server...")
+                amazone_dns_address = ("127.0.0.1", 22000)
+                connection.send_message(record, amazone_dns_address)
+                response, addr = connection.recieve_message()
+                if(response != None):
+                    rr_table.add_record(response)
             # Then save the record if valid
             # Else, add "Record not found" in the DNS response
 
             # The format of the DNS query and response is in the project description
 
             # Display RR table
-            pass
+            rr_table.display_table()
     except KeyboardInterrupt:
         print("Keyboard interrupt received, exiting...")
     finally:
         # Close UDP socket
+        connection.close()
         pass
 
 
 def main():
     rr_table = RRTable()
+    connection = UDPConnection()
     # Add initial records
     rr_table.add_record("www.csusm.edu", "A", "144.37.5.45", None, 1)
     rr_table.add_record("my.csusm.edu", "A", "144.37.5.150", None, 1)
@@ -45,7 +60,7 @@ def main():
 
     local_dns_address = ("127.0.0.1", 21000)
     # Bind address to UDP socket
-
+    connection.bind(local_dns_address)
     listen()
 
 
