@@ -1,7 +1,7 @@
 import errno
 import socket
 import sys
-
+import json
 
 def listen(rr_table, connection):
     try:
@@ -11,11 +11,11 @@ def listen(rr_table, connection):
             print(f"Amazoneserver: Recieved Request for {request} from {connection_addr}")
             # Check RR table for record
             record = rr_table.get_record(request)
-            print(record)
             if record:
-                print(f"AmazoneServer: Record found for {request}: {record['result']}")
+                print(f"AmazoneServer: Record found for {request}")
                 response = [record['name'], record['type'], record['result'], 60, 0]
-                connection.send_message(record, connection_addr)
+                responsepack = json.dumps(response)
+                connection.send_message(responsepack, connection_addr)
             
             # If not found, add "Record not found" in the DNS response
             # Else, return record in DNS response
@@ -38,8 +38,8 @@ def main():
     connection = UDPConnection()
     # Add initial records
     # These can be found in the test cases diagram
-    rr_table.add_record("shop.amazone.com", "A", "3.33.147.88", None, 1)
-    rr_table.add_record("cloud.amazone.com", "A", "15.197.140.28", None, 1)
+    rr_table.add_record("shop.amazone.com", "A", "3.33.147.88", "None", 1)
+    rr_table.add_record("cloud.amazone.com", "A", "15.197.140.28", "None", 1)
     amazone_dns_address = ("127.0.0.1", 22000)
     # Bind address to UDP socket
     connection.bind(amazone_dns_address)
@@ -77,19 +77,21 @@ class RRTable:
         self.record_number += 1
 
     def get_record(self, hostname):
-        for key, record in self.records:
-                if record['name'] == hostname:
-                    return record
+        for record_id, record in self.records.items():
+            if(record["name"] == hostname):
+                return record
         return None
 
     def display_table(self):
         # Display the table in the following format (include the column names):
-        # record_number,name,type,result,ttl,static
-        print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
-        print('-' * 90)
+            # record_number,name,type,result,ttl,static
+            #print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
+            #print('-' * 90)
             
-        for record_id, record in self.records.items():
-            print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+            for record_id, record in self.records.items():
+                 #print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+                 thing = str(record_id) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
+                 print(thing)
 
 
 class DNSTypes:
