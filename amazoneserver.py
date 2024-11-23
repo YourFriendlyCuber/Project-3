@@ -8,17 +8,20 @@ def listen(rr_table, connection):
         while True:
             # Wait for query
             request, connection_addr = connection.receive_message()
-            print(f"Amazoneserver: Recieved Request for {request['hostname']} from {connection_addr}")
+            print(f"Amazoneserver: Recieved Request for {request} from {connection_addr}")
             # Check RR table for record
             record = rr_table.get_record(request)
+            print(record)
             if record:
                 print(f"AmazoneServer: Record found for {request}: {record['result']}")
+                response = [record['name'], record['type'], record['result'], 60, 0]
+                connection.send_message(record, connection_addr)
             
             # If not found, add "Record not found" in the DNS response
             # Else, return record in DNS response
             else:
                 print(f"record not found")
-                response = None
+                response = "Record Not Found"
                 connection.send_message(response, connection_addr)
             # The format of the DNS query and response is in the project description
 
@@ -75,7 +78,7 @@ class RRTable:
 
     def get_record(self, hostname):
         for key, record in self.records:
-                if record['hostname'] == hostname:
+                if record['name'] == hostname:
                     return record
         return None
 

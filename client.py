@@ -14,10 +14,10 @@ def handle_request(hostname, rr_table, connection):
     else:
         print(f"record not found for {hostname}. Asking local DNS server...")
         local_dns_address = ("127.0.0.1", 21000)
-        connection.send_message(record, local_dns_address)
-        response, address = connection.recieve_message()
-        if(response != None):
-            rr_table.add_record(response)
+        connection.send_message(hostname, local_dns_address)
+        response, address = connection.receive_message()
+        if(response != "Record Not Found"):
+            rr_table.add_record(response[0], response[1], response[2], response[3], response[4])
     rr_table.display_table()
 
 def main():
@@ -78,7 +78,7 @@ class RRTable:
     def get_record(self, hostname):
         with self.lock:
             for key, record in self.records:
-                if record['hostname'] == hostname:
+                if record['name'] == hostname:
                     return record
             return None
 
@@ -97,7 +97,7 @@ class RRTable:
             with self.lock:
                 # Decrement ttl
                 for record_id, record in self.records.items():
-                    if record['tll'] > 0:
+                    if record['ttl'] > 0:
                         record['ttl'] -= 1
                 self.__remove_expired_records()
             time.sleep(1)
@@ -105,7 +105,7 @@ class RRTable:
     def __remove_expired_records(self):
         # This method is only called within a locked context
         # Remove expired records
-        expired_keys = [key for key, record in self.records.items() if record['ttl'] <= 0]
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] is not None and record['ttl'] <= 0]
         for key in expired_keys:
             del self.records[key]
         # Update record numbers
@@ -119,7 +119,6 @@ class RRTable:
         
         self.records = new_records
         self.record_number = new_record_number
-        pass
 
 
 class DNSTypes:

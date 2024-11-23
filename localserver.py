@@ -10,12 +10,15 @@ def listen(rr_table, connection):
         while True:
             # Wait for query
             request, connection_addr = connection.receive_message()
-            print(f"Localserver: Recieved Request for {request['hostname']} from {connection_addr}")
+            print(f"Localserver: Recieved Request for {request} from {connection_addr}")
             
             # Check RR table for record
             record = rr_table.get_record(request)
+            print(record)
             if record:
                 print(f"LocalServer: Record found for {request}: {record['result']}")
+                response = [record['name'], record['type'], record['result'], 60, 0]
+                connection.send_message(record, connection_addr)
             # If not found, ask the authoritative DNS server of the requested hostname/domain
             
             # This means parsing the query to get the domain (e.g. amazone.com from shop.amazone.com)
@@ -26,16 +29,14 @@ def listen(rr_table, connection):
             else:
                 print(f"record not found for {request}. Asking authoritiative DNS server...")
                 amazone_dns_address = ("127.0.0.1", 22000)
-                connection.send_message(record, amazone_dns_address)
-                response, addr = connection.recieve_message()
-                if(response != None):
-                    rr_table.add_record(response)
+                connection.send_message(request, amazone_dns_address)
+                response, addr = connection.receive_message()
+                if(response != "Record Not Found"):
+                    rr_table.add_record(response[0], response[1], response[2], response[3], response[4])
                     connection.send_message(response, connection_addr)
                 else:
                     print(f"record not found")
                     connection.send_message(response, connection_addr)
-                    
-                    
             # Then save the record if valid
             # Else, add "Record not found" in the DNS response
             
@@ -55,10 +56,10 @@ def main():
     rr_table = RRTable()
     connection = UDPConnection()
     # Add initial records
-    rr_table.add_record("www.csusm.edu", "A", "144.37.5.45", None, 1)
-    rr_table.add_record("my.csusm.edu", "A", "144.37.5.150", None, 1)
-    rr_table.add_record("amazone.com", "NS", "dns.amazone.com", None, 1)
-    rr_table.add_record("dns.amazone.com", "A", "127.0.0.1", None, 1)
+    rr_table.add_record("www.csusm.edu", "A", "144.37.5.45", "None", 1)
+    rr_table.add_record("my.csusm.edu", "A", "144.37.5.150", "None", 1)
+    rr_table.add_record("amazone.com", "NS", "dns.amazone.com", "None", 1)
+    rr_table.add_record("dns.amazone.com", "A", "127.0.0.1", "None", 1)
     # These can be found in the test cases diagram
 
     local_dns_address = ("127.0.0.1", 21000)
@@ -93,19 +94,20 @@ class RRTable:
     def add_record(self, hostname, record_type, result, ttl, static):
         self.record_number += 1
         with self.lock:
-            self.records[self.record_number] = {
-                "record_number": self.record_number,
-                "name": hostname,
-                "type": record_type,
-                "result": result,
-                "ttl": ttl,
-                "static" : static
-            }
+            if(ttl is None):
+                self.records[self.record_number] = {
+                    "record_number": self.record_number,
+                    "name": hostname,
+                    "type": record_type,
+                    "result": result,
+                    "ttl": ttl,
+                    "static" : static
+                }
 
     def get_record(self, hostname):
         with self.lock:
             for key, record in self.records:
-                if record['hostname'] == hostname:
+                if record['name'] == hostname:
                     return record
             return None
 
@@ -124,8 +126,8 @@ class RRTable:
             with self.lock:
                 # Decrement ttl
                 for record_id, record in self.records.items():
-                    if (record['tll'] > 0) and record['ttl'] != None:
-                        record['ttl'] -= 1
+                    if(record['ttl'] is not None and record['ttl'] > 0):
+                        record['ttl'] -= 1   
                 self.__remove_expired_records()
             time.sleep(1)
 
@@ -133,7 +135,7 @@ class RRTable:
         # This method is only called within a locked context
 
         # Remove expired records
-        expired_keys = [key for key, record in self.records.items() if record['ttl'] <= 0]
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] is not None and record['ttl'] <= 0]
         for key in expired_keys:
             del self.records[key]
         # Update record numbers
@@ -147,7 +149,6 @@ class RRTable:
         
         self.records = new_records
         self.record_number = new_record_number
-        pass
 
 
 class DNSTypes:
