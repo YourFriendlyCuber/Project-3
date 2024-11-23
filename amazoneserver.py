@@ -3,26 +3,32 @@ import socket
 import sys
 
 
-def listen():
+def listen(rr_table, connection):
     try:
         while True:
             # Wait for query
-
+            request, connection_addr = connection.receive_message()
+            print(f"Amazoneserver: Recieved Request for {request['hostname']} from {connection_addr}")
             # Check RR table for record
-
+            record = rr_table.get_record(request)
+            if record:
+                print(f"AmazoneServer: Record found for {request}: {record['result']}")
+            
             # If not found, add "Record not found" in the DNS response
             # Else, return record in DNS response
-            
+            else:
+                print(f"record not found")
+                response = None
+                connection.send_message(response, connection_addr)
             # The format of the DNS query and response is in the project description
 
             # Display RR table
-            pass
+            rr_table.display_table()
     except KeyboardInterrupt:
         print("Keyboard interrupt received, exiting...")
     finally:
-        # Close UDP socket
+        connection.close()
         pass
-
 
 def main():
     rr_table = RRTable()
@@ -34,7 +40,8 @@ def main():
     amazone_dns_address = ("127.0.0.1", 22000)
     # Bind address to UDP socket
     connection.bind(amazone_dns_address)
-    listen()
+    print("amazone server ready to recieve")
+    listen(rr_table, connection)
 
 
 def serialize():

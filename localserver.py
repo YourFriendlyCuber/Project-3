@@ -5,20 +5,17 @@ import threading
 import time
 
 
-def listen(hostname, rr_table, connection):
+def listen(rr_table, connection):
     try:
         while True:
             # Wait for query
-            connection.listen(5)
-            print("local server ready to recieve")
-            while True:
-                request, connection_addr = connection.recieve_message()
-                print(f"Localserver: Recieved Request for {request['hostname']} from {connection_addr}")
-                break
+            request, connection_addr = connection.receive_message()
+            print(f"Localserver: Recieved Request for {request['hostname']} from {connection_addr}")
+            
             # Check RR table for record
-            record = rr_table.get_record(hostname)
+            record = rr_table.get_record(request)
             if record:
-                print(f"LocalServer: Record found for {hostname}: {record['result']}")
+                print(f"LocalServer: Record found for {request}: {record['result']}")
             # If not found, ask the authoritative DNS server of the requested hostname/domain
             
             # This means parsing the query to get the domain (e.g. amazone.com from shop.amazone.com)
@@ -27,17 +24,23 @@ def listen(hostname, rr_table, connection):
 
             # When sending a query to the authoritative DNS server, use port 22000
             else:
-                print(f"record not found for {hostname}. Asking authoritiative DNS server...")
+                print(f"record not found for {request}. Asking authoritiative DNS server...")
                 amazone_dns_address = ("127.0.0.1", 22000)
                 connection.send_message(record, amazone_dns_address)
                 response, addr = connection.recieve_message()
                 if(response != None):
                     rr_table.add_record(response)
+                    connection.send_message(response, connection_addr)
+                else:
+                    print(f"record not found")
+                    connection.send_message(response, connection_addr)
+                    
+                    
             # Then save the record if valid
             # Else, add "Record not found" in the DNS response
-
+            
             # The format of the DNS query and response is in the project description
-
+            
             # Display RR table
             rr_table.display_table()
     except KeyboardInterrupt:
@@ -61,7 +64,8 @@ def main():
     local_dns_address = ("127.0.0.1", 21000)
     # Bind address to UDP socket
     connection.bind(local_dns_address)
-    listen()
+    print("local server ready to recieve")
+    listen(rr_table, connection)
 
 
 def serialize():
