@@ -9,11 +9,10 @@ import json
 def handle_request(hostname, rr_table, connection):
     # Check RR table for record
     record = rr_table.get_record(hostname)
-    if record:
-        print(f"Client: Record found for {hostname}:\n {record}")
+        #print(f"Client: Record found for {hostname}:\n {record}")
     # If not found, ask the local DNS server, then save the record if valid
-    else:
-        print(f"record not found for {hostname}. Asking local DNS server...")
+    if not record:
+        #print(f"record not found for {hostname}. Asking local DNS server...")
         local_dns_address = ("127.0.0.1", 21000)
         connection.send_message(hostname, local_dns_address)
         response, address = connection.receive_message()
@@ -91,9 +90,10 @@ class RRTable:
             #print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
             #print('-' * 90)
             
+            
             for record_id, record in self.records.items():
                  #print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
-                 thing = str(record_id) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
+                 thing = str(record_id + 1) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
                  print(thing)
 
     def __decrement_ttl(self):

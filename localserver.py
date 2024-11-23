@@ -10,12 +10,12 @@ def listen(rr_table, connection):
         while True:
             # Wait for query
             request, connection_addr = connection.receive_message()
-            print(f"Localserver: Recieved Request for {request} from {connection_addr}")
+            #print(f"Localserver: Recieved Request for {request} from {connection_addr}")
             
             # Check RR table for record
             record = rr_table.get_record(request)
             if record:
-                print(f"LocalServer: Record found for {request}")
+                #print(f"LocalServer: Record found for {request}")
                 response = [record['name'], record['type'], record['result'], 60, 0]
                 responsepack = json.dumps(response)
                 connection.send_message(responsepack, connection_addr)
@@ -27,7 +27,7 @@ def listen(rr_table, connection):
 
             # When sending a query to the authoritative DNS server, use port 22000
             else:
-                print(f"record not found for {request}. Asking authoritiative DNS server...")
+                #print(f"record not found for {request}. Asking authoritiative DNS server...")
                 amazone_dns_address = ("127.0.0.1", 22000)
                 connection.send_message(request, amazone_dns_address)
                 response, addr = connection.receive_message()
@@ -36,7 +36,7 @@ def listen(rr_table, connection):
                     rr_table.add_record(responseunpack[0], responseunpack[1], responseunpack[2], responseunpack[3], responseunpack[4])
                     connection.send_message(response, connection_addr)
                 else:
-                    print(f"record not found")
+                    #print(f"record not found")
                     connection.send_message(response, connection_addr)
             # Then save the record if valid
             # Else, add "Record not found" in the DNS response
@@ -66,7 +66,7 @@ def main():
     local_dns_address = ("127.0.0.1", 21000)
     # Bind address to UDP socket
     connection.bind(local_dns_address)
-    print("local server ready to recieve")
+    #print("local server ready to recieve")
     listen(rr_table, connection)
 
 
@@ -119,7 +119,7 @@ class RRTable:
             
             for record_id, record in self.records.items():
                  #print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
-                 thing = str(record_id) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
+                 thing = str(record_id + 1) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
                  print(thing)
 
     def __decrement_ttl(self):
