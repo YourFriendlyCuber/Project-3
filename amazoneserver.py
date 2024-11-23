@@ -12,7 +12,7 @@ def listen(rr_table, connection):
             # Check RR table for record
             record = rr_table.get_record(request)
             if record:
-                print(f"AmazoneServer: Record found for {request}: {record['result']}")
+                print(f"AmazoneServer: Record found for {request}")
                 response = [record['name'], record['type'], record['result'], 60, 0]
                 responsepack = json.dumps(response)
                 connection.send_message(responsepack, connection_addr)
@@ -84,12 +84,14 @@ class RRTable:
 
     def display_table(self):
         # Display the table in the following format (include the column names):
-        # record_number,name,type,result,ttl,static
-        print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
-        print('-' * 90)
+            # record_number,name,type,result,ttl,static
+            #print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
+            #print('-' * 90)
             
-        for record_id, record in self.records.items():
-            print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+            for record_id, record in self.records.items():
+                 #print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+                 thing = str(record_id) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
+                 print(thing)
 
 
 class DNSTypes:

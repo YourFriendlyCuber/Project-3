@@ -88,11 +88,13 @@ class RRTable:
         with self.lock:
             # Display the table in the following format (include the column names):
             # record_number,name,type,result,ttl,static
-            print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
-            print('-' * 90)
+            #print(f"{'record_number':<15}{'name':<20}{'type':<10}{'result':<30}{'ttl':<6}{'static':<6}")
+            #print('-' * 90)
             
             for record_id, record in self.records.items():
-                 print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+                 #print(f"{record_id:<15}{record['name']:<20}{record['type']:<10}{record['result']:<30}{record['ttl']:<6}{record['static']:<6}")
+                 thing = str(record_id) + "," + str(record['name']) + "," + str(record['type']) + "," + str(record['result']) + "," + str(record['ttl']) + "," + str(record['static'])
+                 print(thing)
 
     def __decrement_ttl(self):
         while True:
