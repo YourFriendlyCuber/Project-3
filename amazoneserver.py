@@ -1,7 +1,7 @@
 import errno
 import socket
 import sys
-
+import json
 
 def listen(rr_table, connection):
     try:
@@ -11,11 +11,11 @@ def listen(rr_table, connection):
             print(f"Amazoneserver: Recieved Request for {request} from {connection_addr}")
             # Check RR table for record
             record = rr_table.get_record(request)
-            print(record)
             if record:
                 print(f"AmazoneServer: Record found for {request}: {record['result']}")
                 response = [record['name'], record['type'], record['result'], 60, 0]
-                connection.send_message(record, connection_addr)
+                responsepack = json.dumps(response)
+                connection.send_message(responsepack, connection_addr)
             
             # If not found, add "Record not found" in the DNS response
             # Else, return record in DNS response
@@ -38,8 +38,8 @@ def main():
     connection = UDPConnection()
     # Add initial records
     # These can be found in the test cases diagram
-    rr_table.add_record("shop.amazone.com", "A", "3.33.147.88", None, 1)
-    rr_table.add_record("cloud.amazone.com", "A", "15.197.140.28", None, 1)
+    rr_table.add_record("shop.amazone.com", "A", "3.33.147.88", "None", 1)
+    rr_table.add_record("cloud.amazone.com", "A", "15.197.140.28", "None", 1)
     amazone_dns_address = ("127.0.0.1", 22000)
     # Bind address to UDP socket
     connection.bind(amazone_dns_address)
@@ -77,9 +77,9 @@ class RRTable:
         self.record_number += 1
 
     def get_record(self, hostname):
-        for key, record in self.records:
-                if record['name'] == hostname:
-                    return record
+        for record_id, record in self.records.items():
+            if(record["name"] == hostname):
+                return record
         return None
 
     def display_table(self):

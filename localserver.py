@@ -3,7 +3,7 @@ import socket
 import sys
 import threading
 import time
-
+import json
 
 def listen(rr_table, connection):
     try:
@@ -14,11 +14,11 @@ def listen(rr_table, connection):
             
             # Check RR table for record
             record = rr_table.get_record(request)
-            print(record)
             if record:
                 print(f"LocalServer: Record found for {request}: {record['result']}")
                 response = [record['name'], record['type'], record['result'], 60, 0]
-                connection.send_message(record, connection_addr)
+                responsepack = json.dumps(response)
+                connection.send_message(responsepack, connection_addr)
             # If not found, ask the authoritative DNS server of the requested hostname/domain
             
             # This means parsing the query to get the domain (e.g. amazone.com from shop.amazone.com)
@@ -31,8 +31,9 @@ def listen(rr_table, connection):
                 amazone_dns_address = ("127.0.0.1", 22000)
                 connection.send_message(request, amazone_dns_address)
                 response, addr = connection.receive_message()
-                if(response != "Record Not Found"):
-                    rr_table.add_record(response[0], response[1], response[2], response[3], response[4])
+                responseunpack = json.loads(response)
+                if(responseunpack != "Record Not Found"):
+                    rr_table.add_record(responseunpack[0], responseunpack[1], responseunpack[2], responseunpack[3], responseunpack[4])
                     connection.send_message(response, connection_addr)
                 else:
                     print(f"record not found")
@@ -56,11 +57,11 @@ def main():
     rr_table = RRTable()
     connection = UDPConnection()
     # Add initial records
+    # These can be found in the test cases diagram
     rr_table.add_record("www.csusm.edu", "A", "144.37.5.45", "None", 1)
     rr_table.add_record("my.csusm.edu", "A", "144.37.5.150", "None", 1)
     rr_table.add_record("amazone.com", "NS", "dns.amazone.com", "None", 1)
     rr_table.add_record("dns.amazone.com", "A", "127.0.0.1", "None", 1)
-    # These can be found in the test cases diagram
 
     local_dns_address = ("127.0.0.1", 21000)
     # Bind address to UDP socket
@@ -92,24 +93,22 @@ class RRTable:
         self.thread.start()
 
     def add_record(self, hostname, record_type, result, ttl, static):
-        self.record_number += 1
         with self.lock:
-            if(ttl is None):
                 self.records[self.record_number] = {
-                    "record_number": self.record_number,
                     "name": hostname,
                     "type": record_type,
                     "result": result,
                     "ttl": ttl,
                     "static" : static
                 }
+        self.record_number += 1
 
     def get_record(self, hostname):
         with self.lock:
-            for key, record in self.records:
-                if record['name'] == hostname:
+            for record_id, record in self.records.items():
+                if(record["name"] == hostname):
                     return record
-            return None
+        return None
 
     def display_table(self):
         with self.lock:
@@ -126,7 +125,7 @@ class RRTable:
             with self.lock:
                 # Decrement ttl
                 for record_id, record in self.records.items():
-                    if(record['ttl'] is not None and record['ttl'] > 0):
+                    if(record['ttl'] != "None" and record['ttl'] > 0):
                         record['ttl'] -= 1   
                 self.__remove_expired_records()
             time.sleep(1)
@@ -135,7 +134,7 @@ class RRTable:
         # This method is only called within a locked context
 
         # Remove expired records
-        expired_keys = [key for key, record in self.records.items() if record['ttl'] is not None and record['ttl'] <= 0]
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] != "None" and record['ttl'] <= 0]
         for key in expired_keys:
             del self.records[key]
         # Update record numbers

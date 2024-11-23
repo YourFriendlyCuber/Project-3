@@ -3,6 +3,7 @@ import socket
 import sys
 import threading
 import time
+import json
 
 
 def handle_request(hostname, rr_table, connection):
@@ -16,8 +17,9 @@ def handle_request(hostname, rr_table, connection):
         local_dns_address = ("127.0.0.1", 21000)
         connection.send_message(hostname, local_dns_address)
         response, address = connection.receive_message()
+        responseunpack = json.loads(response)
         if(response != "Record Not Found"):
-            rr_table.add_record(response[0], response[1], response[2], response[3], response[4])
+            rr_table.add_record(responseunpack[0], responseunpack[1], responseunpack[2], responseunpack[3], responseunpack[4])
     rr_table.display_table()
 
 def main():
@@ -77,10 +79,10 @@ class RRTable:
 
     def get_record(self, hostname):
         with self.lock:
-            for key, record in self.records:
-                if record['name'] == hostname:
+            for record_id, record in self.records.items():
+                if(record["name"] == hostname):
                     return record
-            return None
+        return None
 
     def display_table(self):
         with self.lock:
@@ -105,7 +107,7 @@ class RRTable:
     def __remove_expired_records(self):
         # This method is only called within a locked context
         # Remove expired records
-        expired_keys = [key for key, record in self.records.items() if record['ttl'] is not None and record['ttl'] <= 0]
+        expired_keys = [key for key, record in self.records.items() if record['ttl'] != "None" and record['ttl'] <= 0]
         for key in expired_keys:
             del self.records[key]
         # Update record numbers
